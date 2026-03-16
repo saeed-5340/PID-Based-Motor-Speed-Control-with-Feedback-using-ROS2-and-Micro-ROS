@@ -24,6 +24,8 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'check_data_subscription = pid_based_motor_control.check_data_subscription:main',
+            'motor_speed_control_pid = pid_based_motor_control.motor_speed_control_pid:main',
         ],
     },
 )
