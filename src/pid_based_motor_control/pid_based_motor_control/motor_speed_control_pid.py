@@ -16,9 +16,9 @@ class MotorSpeedControlNode(Node):
         self.declare_parameter('wheel_separation', 0.185)
         self.declare_parameter('wheel_radius', 0.021)
         self.declare_parameter('encoder_ticks_per_revolution', 48)
-        self.declare_parameter('pid_kp', 25)
-        self.declare_parameter('pid_ki', 2)
-        self.declare_parameter('pid_kd', 0.4)
+        self.declare_parameter('pid_kp', 50)
+        self.declare_parameter('pid_ki', 0)
+        self.declare_parameter('pid_kd', 0)
         # self.declare_parameter('pid_max_output', 255)
         
         
@@ -45,7 +45,7 @@ class MotorSpeedControlNode(Node):
         
         # self.cmd_vel_sub = self.create_subscription(Twist,'/cmd_vel',self.cmd_vel_callback,10)
         
-        self.control_timer = self.create_timer(0.02, self.control_loop)
+        self.control_timer = self.create_timer(0.5, self.control_loop)
         
         
         # static variables:
@@ -53,8 +53,8 @@ class MotorSpeedControlNode(Node):
         self.last_right_encoder_value = 0
         self.left_wheel_actual_speed = 0     
         self.right_wheel_actual_speed = 0
-        self.left_wheel_desired_speed = 2 
-        self.right_wheel_desired_speed = 2
+        self.left_wheel_desired_speed = 5
+        self.right_wheel_desired_speed = 5
         self.last_time = self.get_clock().now()
 
         # PID control variables:
@@ -68,15 +68,17 @@ class MotorSpeedControlNode(Node):
         left = msg.data[0]   
         right = msg.data[1]
         time_now = self.get_clock().now()
-        dt = (time_now - self.last_time).nanoseconds / 1e9
+        measure_time = (time_now - self.last_time).nanoseconds / 1e9
         
-        if dt > 0:
+        if measure_time > 0:
             N_left = ((left - self.last_left_encoder_value)/self.encoder_ticks_per_revolution) 
-            self.left_wheel_actual_speed = ((2 * math.pi * N_left) / dt ) * self.wheel_radius    # m/s
+            self.left_wheel_actual_speed = ((2 * math.pi * N_left) / measure_time )         # rad/s
+            # self.left_wheel_actual_speed = self.left_wheel_actual_speed * self.wheel_radius    # m/s
             
             
             N_right = ((right - self.last_right_encoder_value)/self.encoder_ticks_per_revolution) 
-            self.right_wheel_actual_speed = ((2 * math.pi * N_right) / dt ) * self.wheel_radius    #m/s
+            self.right_wheel_actual_speed = ((2 * math.pi * N_right) / measure_time )           # rad/s
+            # self.right_wheel_actual_speed = self.right_wheel_actual_speed* self.wheel_radius    #m/s
             
             self.last_left_encoder_value = left
             self.last_right_encoder_value = right
@@ -85,8 +87,13 @@ class MotorSpeedControlNode(Node):
         self.get_logger().info(f"Received encoder data: {left}, {right}")
             
     def control_loop(self):
+        # current_time = self.get_clock().now()
+        # dt = (current_time - self.last_control_time).nanoseconds / 1e9
+        # self.last_control_time = current_time
+        # if dt <= 0:
+        #     return
         left_error = self.left_wheel_desired_speed - self.left_wheel_actual_speed
-        dt = 0.02
+        dt = 0.5
         P_term_L = left_error * self.pid_kp
         self.left_wheel_error_sum += left_error * dt
         I_term_L = self.pid_ki * self.left_wheel_error_sum
